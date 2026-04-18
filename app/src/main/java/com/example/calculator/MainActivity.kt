@@ -5,14 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -23,12 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.isDigitsOnly
 import com.example.calculator.ui.theme.CalculatorTheme
-import kotlin.enums.enumEntries
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,329 +41,245 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CalculatorTheme {
-                var firstNumber by remember { mutableStateOf(value = "") }
-                var secondNumber by remember { mutableStateOf(value = "") }
-                var selectedOperator by remember { mutableStateOf(value = "") }
+                val haptic = LocalHapticFeedback.current
+                var arithmeticExpression by remember { mutableStateOf(value = "") }
                 var result by remember { mutableStateOf(value = "") }
-                var expressionRow by remember { mutableStateOf(value = "") }
-                val arithmeticOperators : List<String> =  listOf("+","-","*","/")
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
                             .padding(innerPadding)
-                            .background(Color.Black)
+                            .background(Color.Transparent)
                     ) {
                         // Main Column
                         Text(
                             text = "Calculator",
-                            modifier = Modifier.padding(innerPadding),
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .align(Alignment.CenterHorizontally),
                             fontSize = 35.sp,
                             fontWeight = FontWeight.Black
                         )
                         //Row to show the expression
-                        Box(modifier = Modifier) {
-                            Row(
-                                modifier = Modifier.padding(vertical = 100.dp),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                /*if (firstNumber.isNotEmpty() and firstNumber.equals(0.toString())) {
-                                    expressionRow = 0.toString()
-                                } else if (selectedOperator == "") {
-                                    expressionRow = firstNumber.toInt().toString()
-                                } else if (secondNumber.isNotEmpty() and secondNumber.equals(0.toString())) {
-                                    expressionRow = firstNumber.toInt().toString() + selectedOperator
-                                } else {
-                                    expressionRow =
-                                        firstNumber + selectedOperator + secondNumber
-                                }*/
-                                Text(
-                                    text = firstNumber,
-                                    fontSize = 35.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
+                        Box(
+                            modifier = Modifier
+                                .padding(7.dp)
+                                .offset(15.dp, 50.dp)
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = arithmeticExpression,
+                                fontSize = 35.sp,
+                                fontWeight = FontWeight.Black
+                            )
                         }
                         HorizontalDivider(modifier = Modifier)
-                        Box(modifier = Modifier.weight(2f)) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                //.size(150.dp, 25.dp)
+                                .fillMaxWidth()
+                        ) {
                             //Result Row
-                            Row(modifier = Modifier.padding(vertical = 25.dp, horizontal = 15.dp)) {
-                                Text(
-                                    text = "Result : ",
-                                    fontSize = 35.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    text = result,
-                                    fontSize = 35.sp,
-                                    fontWeight = FontWeight.Black
-                                )
+                            Column(modifier = Modifier) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(7.dp)
+                                        .offset(15.dp)
+                                ) {
+                                    Text(
+                                        text = "Result : ",
+                                        fontSize = 35.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .padding(7.dp)
+                                        .offset(x = 15.dp, y = 35.dp)
+                                ) {
+                                    Text(
+                                        text = result,
+                                        fontSize = 35.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
                             }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(1.dp))
-                        Box(modifier = Modifier.weight(2f)) {
-                            Row(
-                                modifier = Modifier.padding(all = 2.dp),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.Absolute.Center
-                            ) {
-                                // First Row
-                                for (firstRowNum in 1..3) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Button(
+                            Column(modifier = Modifier.offset(y = (-50).dp)) {
+                                var isClicked by remember { mutableStateOf(false) }
+                                Row(modifier = Modifier) {
+                                    if (arithmeticExpression.isNotEmpty()) {
+                                        ElevatedButton(
                                             onClick = {
-                                                firstNumber += firstRowNum.toString()
-//                                                if (firstNumber.isNotEmpty() and firstNumber.equals(0.toString())) {
-//                                                    firstNumber = firstRowNum.toString()
-//                                                } else if(firstNumber.toDouble() > 0.0 && selectedOperator.isEmpty()){
-//                                                 firstNumber = firstNumber.plus(firstRowNum.toString())
-//                                                }
-//                                                else if(selectedOperator.isNotEmpty() && secondNumber.isNotEmpty() && secondNumber.equals(0.toString())){
-//                                                    secondNumber = firstRowNum.toString()
-//                                                } else{
-//                                                    secondNumber = secondNumber.plus(firstRowNum.toString())
-//                                                }
+                                                arithmeticExpression =
+                                                    arithmeticExpression.dropLast(1); isClicked =
+                                                true; haptic.performHapticFeedback(
+                                                HapticFeedbackType.ContextClick
+                                            )
                                             },
-                                            modifier = Modifier.size(80.dp, 120.dp)
+                                            modifier = Modifier.size(100.dp, 70.dp)
+                                                .offset(290.dp, 50.dp)
                                         ) {
                                             Text(
-                                                text = firstRowNum.toString(),
+                                                "C",
                                                 fontSize = 35.sp,
-                                                fontWeight = FontWeight.Black
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
                                 }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            if(firstNumber.isNotEmpty() and !arithmeticOperators.contains(firstNumber.last().toString())){
-                                                firstNumber += "/"
-                                            }
-                                            //selectedOperator = "/"
-                                                  },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "/",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
+                                Row(modifier = Modifier) {
+                                    if (arithmeticExpression.isNotEmpty() and isClicked) {
+                                        ElevatedButton(
+                                            onClick = {
+                                                arithmeticExpression = ""; result = ""; isClicked =
+                                                false; haptic.performHapticFeedback(
+                                                HapticFeedbackType.ContextClick
+                                            )
+                                            },
+                                            modifier = Modifier.size(width = 100.dp, 90.dp)
+                                                .offset(290.dp, 50.dp)
+                                        ) {
+                                            Text(
+                                                "AC",
+                                                fontSize = 35.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(1.dp))
-                        Box(modifier = Modifier.weight(2f)) {
-                            Row(
-                                modifier = Modifier.padding(all = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Absolute.Center
-                            ) {
-                                for (secondRowNum in 4..6) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Button(
-                                            onClick = {
-                                                firstNumber += secondRowNum.toString()
-                                                /*if (firstNumber.isNotEmpty() and firstNumber.equals(0.toString())) {
-                                                    firstNumber = secondRowNum.toString()
+                            HorizontalDivider(modifier = Modifier)
+                            // First Row
+                            Column(modifier = Modifier.weight(3f)) {
+                                val firstRowItems = listOf<String>("1", "2", "3", "*")
+                                val secondRowItems = listOf<String>("4", "5", "6", "%")
+                                val thirdRowItems = listOf<String>("7", "8", "9", "-")
+                                val fourthRowItems = listOf<String>(".", "0", "=", "+")
+                                Row(
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    for (item in 0..<firstRowItems.size) {
+                                        ElevatedButton(
+                                            onClick = { arithmeticExpression += firstRowItems[item] ; haptic.performHapticFeedback(HapticFeedbackType.ContextClick)},
+                                            modifier = Modifier
+                                                .paddingFromBaseline(
+                                                    top = 35.dp,
+                                                    bottom = 25.dp
+                                                )
+                                                .size(90.dp, 90.dp)
+                                        ) {
+                                            Text(
+                                                text = if (firstRowItems[item] == "*") {
+                                                    "x"
                                                 } else {
-                                                    secondNumber = secondRowNum.toString()
-                                                }*/
-                                            },
-                                            modifier = Modifier.size(80.dp, 120.dp)
-                                        ) {
-                                            Text(
-                                                text = secondRowNum.toString(),
+                                                    firstRowItems[item]
+                                                },
                                                 fontSize = 35.sp,
-                                                fontWeight = FontWeight.Black
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
+                                        Spacer(modifier = Modifier.size(5.dp))
                                     }
                                 }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            if(firstNumber.isNotEmpty() and !arithmeticOperators.contains(firstNumber.last().toString())){
-                                                firstNumber += "*"
+                                HorizontalDivider(modifier = Modifier)
+                                Row(
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    for (item in 0..<secondRowItems.size) {
+                                        Column(modifier = Modifier) {
+                                            ElevatedButton(
+                                                onClick = {
+                                                    arithmeticExpression =
+                                                        arithmeticExpression.plus(secondRowItems[item])
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                                },
+                                                modifier = Modifier
+                                                    .paddingFromBaseline(
+                                                        top = 35.dp,
+                                                        bottom = 25.dp
+                                                    )
+                                                    .size(90.dp, 90.dp)
+                                            ) {
+                                                Text(
+                                                    text = secondRowItems[item],
+                                                    fontSize = 35.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
-                                            //selectedOperator = "*"
-                                            },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "*",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(1.dp))
-                        Box(modifier = Modifier.weight(2f)) {
-                            Row(
-                                modifier = Modifier.padding(all = 2.dp),
-                                verticalAlignment = Alignment.Bottom,
-                                horizontalArrangement = Arrangement.Absolute.Center
-                            ) {
-                                for (thirdRowNum in 7..9) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Button(
-                                            onClick = {
-                                                firstNumber += thirdRowNum.toString()
-                                                /*if (firstNumber.isNotEmpty() and firstNumber.equals(0.toString())) {
-                                                    firstNumber = thirdRowNum.toString()
-                                                } else {
-                                                    secondNumber = thirdRowNum.toString()
-                                                }*/
-                                            },
-                                            modifier = Modifier.size(80.dp, 120.dp)
-                                        ) {
-                                            Text(
-                                                text = thirdRowNum.toString(),
-                                                fontSize = 35.sp,
-                                                fontWeight = FontWeight.Black
-                                            )
                                         }
+                                        Spacer(modifier = Modifier.size(5.dp))
                                     }
                                 }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            if(firstNumber.isNotEmpty() and !arithmeticOperators.contains(firstNumber.last().toString())){
-                                                firstNumber += "-"
+                                HorizontalDivider(modifier = Modifier)
+                                Row(
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    for (item in 0..<thirdRowItems.size) {
+                                        Column(modifier = Modifier) {
+                                            ElevatedButton(
+                                                onClick = {
+                                                    arithmeticExpression =
+                                                        arithmeticExpression.plus(thirdRowItems[item])
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                                },
+                                                modifier = Modifier
+                                                    .paddingFromBaseline(
+                                                        top = 35.dp,
+                                                        bottom = 25.dp
+                                                    )
+                                                    .size(90.dp, 90.dp)
+                                            ) {
+                                                Text(
+                                                    text = thirdRowItems[item],
+                                                    fontSize = 35.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
-                                            //selectedOperator = "-"
-                                                  },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "-",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
+                                        }
+                                        Spacer(modifier = Modifier.size(5.dp))
                                     }
                                 }
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(1.dp))
-                        Box(modifier = Modifier.weight(2f)) {
-                            Row(
-                                modifier = Modifier.padding(all = 2.dp),
-                                verticalAlignment = Alignment.Bottom,
-                                horizontalArrangement = Arrangement.Absolute.Center
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            if (firstNumber.last() == '0' && firstNumber.length == 1){
-                                                firstNumber = 0.toString()
-                                            } else {
-                                                firstNumber += 0.toString()
-                                            }
-                                            /*if (firstNumber.toDouble() > 0.0 && selectedOperator.isEmpty()) {
-                                                firstNumber += "0"
-                                            } else if (secondNumber.toDouble() > 0.0 && selectedOperator.isNotEmpty()) {
-                                                secondNumber += "0"
-                                            } else {
-                                                firstNumber = "0"
-                                            }*/
-                                        },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "0",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            if(firstNumber.isNotEmpty() and !arithmeticOperators.contains(firstNumber.last().toString())){
-                                                firstNumber += "+"
-                                            }
-                                            //selectedOperator = "+"
-                                                  },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "+",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            val pattern = Regex("(?<=[+\\-*/])|(?=[+\\-*/])")
-                                            val numbersWithOperators = firstNumber.split(pattern)
-                                            var calculatedValue = 0.0
-                                            var alreadyExecutedValue = 0.0
-                                            val sortedListAccBODMAS = {numbersWithOperators.find { it in arithmeticOperators }}
-                                            for (number in 0..<numbersWithOperators.size){
-                                                if(numbersWithOperators[number] == ""){
-                                                    calculatedValue = 0.0
-                                                } else if(numbersWithOperators[number].isDigitsOnly() && numbersWithOperators[number].toDouble() != alreadyExecutedValue && numbersWithOperators[number] !in arithmeticOperators ){
-                                                    calculatedValue = numbersWithOperators[number].toDouble()
-                                                } else if(numbersWithOperators[number] in arithmeticOperators){
-                                                    if(result != "" && numbersWithOperators[number+1].isDigitsOnly() && alreadyExecutedValue != numbersWithOperators[number+1].toDouble()){
-                                                        calculatedValue = when(numbersWithOperators[number]){
-                                                            "+" -> (result.toDouble() + numbersWithOperators[number+1].toDouble())
-                                                            "-" -> (result.toDouble() - numbersWithOperators[number+1].toDouble())
-                                                            "*" -> (result.toDouble() * numbersWithOperators[number+1].toDouble())
-                                                            "/" -> (result.toDouble() / numbersWithOperators[number+1].toDouble())
-                                                            else -> 0.0
-                                                        }
-                                                        alreadyExecutedValue = numbersWithOperators[number+1].toDouble()
-                                                    } else{
-                                                        continue
-                                                    }
-                                                }
-                                                result = calculatedValue.toString()
-                                            }
-                                            /*if (firstNumber != null && secondNumber != null && selectedOperator.isNotBlank()) {
-                                                result = when (selectedOperator) {
-                                                    "+" -> firstNumber.toDouble() + secondNumber.toDouble()
-                                                    "-" -> firstNumber.toDouble() - secondNumber.toDouble()
-                                                    "*" -> firstNumber.toDouble() * secondNumber.toDouble()
-                                                    "/" -> if (firstNumber.toDouble() > 0 || secondNumber.toDouble() > 0) {
-                                                        firstNumber.toDouble() / secondNumber.toDouble()
+                                HorizontalDivider(modifier = Modifier)
+                                Row(
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    for (item in 0..<fourthRowItems.size) {
+                                        Column(modifier = Modifier) {
+                                            ElevatedButton(
+                                                onClick = {
+                                                    if (fourthRowItems[item] == "=") {
+                                                        result = calculationLogic(arithmeticExpression)
                                                     } else {
-                                                       ""
+                                                        arithmeticExpression =
+                                                            arithmeticExpression.plus(fourthRowItems[item])
+                                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                                     }
-                                                    else -> 0.toString()
-                                                } as String
-                                            }*/
-                                        },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "=",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Button(
-                                        onClick = {
-                                            firstNumber = "";
-                                            secondNumber = "";
-                                            selectedOperator = "";
-                                            expressionRow = "";
-                                            result = ""
-                                        },
-                                        modifier = Modifier.size(80.dp, 120.dp)
-                                    ) {
-                                        Text(
-                                            text = "C",
-                                            fontSize = 35.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
+                                                },
+                                                modifier = Modifier
+                                                    .paddingFromBaseline(
+                                                        top = 35.dp,
+                                                        bottom = 25.dp
+                                                    )
+                                                    .size(90.dp, 90.dp)
+                                            ) {
+                                                Text(
+                                                    text = fourthRowItems[item],
+                                                    fontSize = 35.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.size(5.dp))
                                     }
                                 }
                             }
@@ -368,4 +289,102 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
+
+    fun calculationLogic(arithmeticExpression: String): String {
+        val pattern = Regex("(?<=[+\\-*/%])|(?=[+\\-*/%])")
+        val numbersWithOperators = arithmeticExpression.split(pattern).toMutableList()
+        try {
+            if (numbersWithOperators.contains("/")) {
+                while (numbersWithOperators.contains("/")) {
+                    val divOperatorIndex = numbersWithOperators.indexOf("/")
+                    val leftNumber =
+                        numbersWithOperators[divOperatorIndex - 1].toDouble()
+                    val rightNumber =
+                        numbersWithOperators[divOperatorIndex + 1].toDouble()
+                    val value = if (rightNumber > 0) {
+                        leftNumber.div(rightNumber)
+                    } else {
+                        0.0
+                    }
+                    if (value > 0) {
+                        numbersWithOperators.removeAt(divOperatorIndex - 1)
+                        numbersWithOperators.removeAt(divOperatorIndex - 1)
+                        numbersWithOperators.removeAt(divOperatorIndex - 1)
+                        numbersWithOperators.add(divOperatorIndex - 1, value.toString())
+                    } else {
+                        return BigDecimal.ZERO.toString()
+                    }
+                }
+            }
+            if (numbersWithOperators.contains("*")) {
+                while (numbersWithOperators.contains("*")) {
+                    val mulOperatorIndex = numbersWithOperators.indexOf("*")
+                    val leftNumber =
+                        numbersWithOperators[mulOperatorIndex - 1].toDouble()
+                    val rightNumber =
+                        numbersWithOperators[mulOperatorIndex + 1].toDouble()
+                    val value = leftNumber.times(rightNumber)
+                    numbersWithOperators.removeAt(mulOperatorIndex - 1)
+                    numbersWithOperators.removeAt(mulOperatorIndex - 1)
+                    numbersWithOperators.removeAt(mulOperatorIndex - 1)
+                    numbersWithOperators.add(mulOperatorIndex - 1, value.toString())
+                }
+            }
+            if (numbersWithOperators.contains("+")) {
+                while (numbersWithOperators.contains("+")) {
+                    val addOperatorIndex = numbersWithOperators.indexOf("+")
+                    val leftNumber =
+                        numbersWithOperators[addOperatorIndex - 1].toDouble()
+                    val rightNumber =
+                        numbersWithOperators[addOperatorIndex + 1].toDouble()
+                    val value = leftNumber.plus(rightNumber)
+                    numbersWithOperators.removeAt(addOperatorIndex - 1)
+                    numbersWithOperators.removeAt(addOperatorIndex - 1)
+                    numbersWithOperators.removeAt(addOperatorIndex - 1)
+                    numbersWithOperators.add(addOperatorIndex - 1, value.toString())
+                }
+            }
+            if (numbersWithOperators.contains("-")) {
+                while (numbersWithOperators.contains("-")) {
+                    val subOperatorIndex =
+                        numbersWithOperators.indexOf("-")
+                    val leftNumber =
+                        numbersWithOperators[subOperatorIndex - 1].toDouble()
+                    val rightNumber =
+                        numbersWithOperators[subOperatorIndex + 1].toDouble()
+                    val value = leftNumber.minus(rightNumber)
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.add(
+                        subOperatorIndex - 1,
+                        value.toString()
+                    )
+                }
+            }
+            if (numbersWithOperators.contains("%")) {
+                while (numbersWithOperators.contains("%")) {
+                    val subOperatorIndex =
+                        numbersWithOperators.indexOf("%")
+                    val leftNumber =
+                        numbersWithOperators[subOperatorIndex - 1].toDouble()
+                    val rightNumber =
+                        numbersWithOperators[subOperatorIndex + 1].toDouble()
+                    val value = leftNumber % rightNumber
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.removeAt(subOperatorIndex - 1)
+                    numbersWithOperators.add(
+                        subOperatorIndex - 1,
+                        value.toString()
+                    )
+                }
+            }
+            return BigDecimal(numbersWithOperators.first()).setScale(1, RoundingMode.HALF_UP).toString()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return BigDecimal.ZERO.toString()
+
+        }
+    }
