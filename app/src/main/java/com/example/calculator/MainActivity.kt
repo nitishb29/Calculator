@@ -21,15 +21,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFromBaseline
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,8 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.calculator.ui.theme.CalculatorTheme
-import java.math.BigDecimal
-import java.math.RoundingMode
+import net.objecthunter.exp4j.ExpressionBuilder
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +56,6 @@ class MainActivity : ComponentActivity() {
             CalculatorTheme {
                 var arithmeticExpression by remember { mutableStateOf(value = "") }
                 var result by remember { mutableStateOf(value = "") }
-                val pattern = Regex("(?<=[+\\-*/%])|(?=[+\\-*/%])")
                 val decimalformatter = DecimalFormat("0.##########")
                 val bgColor = if (isSystemInDarkTheme()) {
                     Color(0xFF1A1C18)
@@ -84,12 +79,12 @@ class MainActivity : ComponentActivity() {
                         )
                         //Row to show the expression
                         Box(
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(2.dp)
+                                .align(Alignment.End)
                         ) {
-                            Row(
-                                modifier = Modifier,
-                                horizontalArrangement = Arrangement.End
-                            ) {
+                            Row(modifier = Modifier) {
                                 AnimatedVisibility(
                                     visible = arithmeticExpression.isNotEmpty(),
                                     modifier = Modifier,
@@ -105,8 +100,7 @@ class MainActivity : ComponentActivity() {
                                     Text(
                                         text = arithmeticExpression,
                                         fontSize = 35.sp,
-                                        modifier = Modifier.padding(8.dp),
-                                        textAlign = TextAlign.End
+                                        modifier = Modifier.padding(8.dp)
                                     )
                                 }
                             }
@@ -114,55 +108,47 @@ class MainActivity : ComponentActivity() {
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(10.dp)
-                            //.fillMaxWidth()
+                                .padding(2.dp)
+                                .align(Alignment.End)
                         ) {
                             //Result Row
-                            Column(
+                            Row(
                                 modifier = Modifier
                                     .padding(10.dp)
-                                    //.offset(x = 20.dp, y = (10).dp)
-                                    .animateContentSize(tween(200)),
-                                horizontalAlignment = Alignment.End
+                                    .animateContentSize(tween(200))
                             ) {
-                                Row(
+                                AnimatedVisibility(
+                                    visible = arithmeticExpression.isNotEmpty(),
                                     modifier = Modifier,
-                                    verticalAlignment = Alignment.Bottom,
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    AnimatedVisibility(
-                                        visible = arithmeticExpression.isNotEmpty(),
-                                        modifier = Modifier,
-                                        enter = slideInVertically(
-                                            initialOffsetY = { fullHeight -> fullHeight / 4 },
-                                            animationSpec = tween(
-                                                durationMillis = 400,
-                                                easing = LinearOutSlowInEasing
-                                            )
-                                        ) + fadeIn(animationSpec = tween(400)),
-                                        exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
-                                    ) {
-                                        Text(
-                                            text = result,
-                                            fontSize = 35.sp,
-                                            textAlign = TextAlign.End
+                                    enter = slideInVertically(
+                                        initialOffsetY = { fullHeight -> fullHeight / 4 },
+                                        animationSpec = tween(
+                                            durationMillis = 400,
+                                            easing = LinearOutSlowInEasing
                                         )
-                                    }
+                                    ) + fadeIn(animationSpec = tween(400)),
+                                    exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
+                                ) {
+                                    Text(
+                                        text = result,
+                                        fontSize = 35.sp,
+                                        textAlign = TextAlign.End
+                                    )
                                 }
                             }
                         }
-                        HorizontalDivider(modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                         // First Row
                         Column(modifier = Modifier.weight(6f)) {
                             val topRowItems = arrayListOf("AC", "C", "Rem", "%")
-                            val firstRowItems = listOf("1", "2", "3", "*")
+                            val firstRowItems = listOf("1", "2", "3", "x")
                             val secondRowItems = listOf("4", "5", "6", "/")
                             val thirdRowItems = listOf("7", "8", "9", "-")
                             val fourthRowItems = listOf(".", "0", "=", "+")
                             Row(
                                 modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth()
+                                    .padding(5.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 for (item in 0..<topRowItems.size) {
                                     ElevatedButton(
@@ -172,36 +158,22 @@ class MainActivity : ComponentActivity() {
                                             } else if (topRowItems[item] == "C") {
                                                 arithmeticExpression =
                                                     arithmeticExpression.dropLast(1)
-                                                if (arithmeticExpression.isNotEmpty()) {
-                                                    if (arithmeticExpression.last()
-                                                            .isDigit() and arithmeticExpression.contains(
-                                                            pattern
-                                                        )
-                                                    ) {
-                                                        result = decimalformatter.format(
-                                                            calculationLogic(arithmeticExpression).toBigDecimal()
-                                                        )
-                                                    }
-                                                }
+                                                result = calculatedValue(
+                                                    arithmeticExpression,
+                                                    decimalformatter
+                                                )
                                             } else {
                                                 arithmeticExpression += topRowItems[item]
-                                                if (arithmeticExpression.last()
-                                                        .isDigit() and arithmeticExpression.contains(
-                                                        pattern
-                                                    )
-                                                ) {
-                                                    result = decimalformatter.format(
-                                                        calculationLogic(arithmeticExpression).toBigDecimal()
-                                                    )
-                                                }
+                                                result = calculatedValue(
+                                                    arithmeticExpression,
+                                                    decimalformatter
+                                                )
                                             }
                                         },
                                         modifier = Modifier
-                                            .paddingFromBaseline(
-                                                top = 35.dp,
-                                                bottom = 25.dp
-                                            )
-                                            .size(90.dp, 90.dp),
+                                            //.paddingFromBaseline(top = 35.dp, bottom = 25.dp)
+                                            .weight(1f)
+                                            .aspectRatio(1f),
                                         colors = ButtonDefaults.elevatedButtonColors(
                                             containerColor = containerColor(
                                                 topRowItems[item],
@@ -220,39 +192,33 @@ class MainActivity : ComponentActivity() {
                                             softWrap = false
                                         )
                                     }
-                                    Spacer(modifier = Modifier.size(5.dp))
+                                    Spacer(modifier = Modifier)
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                             Row(
                                 modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth()
+                                    .padding(5.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 for (item in 0..<firstRowItems.size) {
                                     ElevatedButton(
                                         onClick = {
                                             if (arithmeticExpression == "0") {
                                                 arithmeticExpression.replace("0", "")
+                                            } else {
+                                                arithmeticExpression += firstRowItems[item]
                                             }
-                                            arithmeticExpression += firstRowItems[item]
-                                            if (arithmeticExpression.last()
-                                                    .isDigit() and arithmeticExpression.contains(
-                                                    pattern
-                                                )
-                                            ) {
-                                                result = decimalformatter.format(
-                                                    calculationLogic(arithmeticExpression).toBigDecimal()
-                                                )
-                                            }
+                                            result = calculatedValue(
+                                                arithmeticExpression,
+                                                decimalformatter
+                                            )
                                         },
                                         contentPadding = PaddingValues(0.dp),
                                         modifier = Modifier
-                                            .paddingFromBaseline(
-                                                top = 35.dp,
-                                                bottom = 25.dp
-                                            )
-                                            .size(90.dp, 90.dp),
+                                            //.paddingFromBaseline(top = 35.dp, bottom = 25.dp)
+                                            .weight(1f)
+                                            .aspectRatio(1f),
                                         colors = ButtonDefaults.elevatedButtonColors(
                                             containerColor = containerColor(
                                                 firstRowItems[item],
@@ -265,179 +231,141 @@ class MainActivity : ComponentActivity() {
                                         )
                                     ) {
                                         Text(
-                                            text = if (firstRowItems[item] == "*") {
-                                                "x"
-                                            } else {
-                                                firstRowItems[item]
-                                            },
+                                            firstRowItems[item],
                                             fontSize = 21.sp,
                                             fontWeight = FontWeight.W900
                                         )
                                     }
-                                    Spacer(modifier = Modifier.size(5.dp))
+                                    Spacer(modifier = Modifier)
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                             Row(
                                 modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth()
+                                    .padding(5.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 for (item in 0..<secondRowItems.size) {
-                                    Column(modifier = Modifier) {
-                                        ElevatedButton(
-                                            onClick = {
-                                                arithmeticExpression =
-                                                    arithmeticExpression.plus(secondRowItems[item])
-                                                if (arithmeticExpression.last()
-                                                        .isDigit() and arithmeticExpression.contains(
-                                                        pattern
-                                                    )
-                                                ) {
-                                                    result = decimalformatter.format(
-                                                        calculationLogic(arithmeticExpression).toBigDecimal()
-                                                    )
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .paddingFromBaseline(
-                                                    top = 35.dp,
-                                                    bottom = 25.dp
-                                                )
-                                                .size(90.dp, 90.dp),
-                                            colors = ButtonDefaults.elevatedButtonColors(
-                                                containerColor = containerColor(
-                                                    secondRowItems[item],
-                                                    isSystemInDarkTheme()
-                                                ),
-                                                contentColor = contentColor(
-                                                    secondRowItems[item],
-                                                    isSystemInDarkTheme()
-                                                )
+                                    ElevatedButton(
+                                        onClick = {
+                                            arithmeticExpression =
+                                                arithmeticExpression.plus(secondRowItems[item])
+                                            result = calculatedValue(
+                                                arithmeticExpression,
+                                                decimalformatter
                                             )
-                                        ) {
-                                            Text(
-                                                text = secondRowItems[item],
-                                                fontSize = 21.sp,
-                                                fontWeight = FontWeight.W900
+
+                                        },
+                                        modifier = Modifier
+                                            //.paddingFromBaseline(top = 35.dp, bottom = 25.dp)
+                                            .weight(1f)
+                                            .aspectRatio(1f),
+                                        contentPadding = PaddingValues(0.dp),
+                                        colors = ButtonDefaults.elevatedButtonColors(
+                                            containerColor = containerColor(
+                                                secondRowItems[item],
+                                                isSystemInDarkTheme()
+                                            ),
+                                            contentColor = contentColor(
+                                                secondRowItems[item],
+                                                isSystemInDarkTheme()
                                             )
-                                        }
+                                        )
+                                    ) {
+                                        Text(
+                                            text = secondRowItems[item],
+                                            fontSize = 21.sp,
+                                            fontWeight = FontWeight.W900
+                                        )
                                     }
-                                    Spacer(modifier = Modifier.size(5.dp))
+                                    Spacer(modifier = Modifier)
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                             Row(
                                 modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth()
+                                    .padding(5.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 for (item in 0..<thirdRowItems.size) {
-                                    Column(modifier = Modifier) {
-                                        ElevatedButton(
-                                            onClick = {
-                                                arithmeticExpression =
-                                                    arithmeticExpression.plus(thirdRowItems[item])
-                                                if (arithmeticExpression.last()
-                                                        .isDigit() and arithmeticExpression.contains(
-                                                        pattern
-                                                    )
-                                                ) {
-                                                    result = decimalformatter.format(
-                                                        calculationLogic(arithmeticExpression).toBigDecimal()
-                                                    )
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .paddingFromBaseline(
-                                                    top = 35.dp,
-                                                    bottom = 25.dp
-                                                )
-                                                .size(90.dp, 90.dp),
-                                            colors = ButtonDefaults.elevatedButtonColors(
-                                                containerColor = containerColor(
-                                                    thirdRowItems[item],
-                                                    isSystemInDarkTheme()
-                                                ),
-                                                contentColor = contentColor(
-                                                    thirdRowItems[item],
-                                                    isSystemInDarkTheme()
-                                                )
+                                    ElevatedButton(
+                                        onClick = {
+                                            arithmeticExpression =
+                                                arithmeticExpression.plus(thirdRowItems[item])
+                                            result = calculatedValue(
+                                                arithmeticExpression,
+                                                decimalformatter
                                             )
-                                        ) {
-                                            Text(
-                                                text = thirdRowItems[item],
-                                                fontSize = 21.sp,
-                                                fontWeight = FontWeight.W900
+                                        },
+                                        modifier = Modifier
+                                            //.paddingFromBaseline(top = 35.dp, bottom = 25.dp)
+                                            .weight(1f)
+                                            .aspectRatio(1f),
+                                        colors = ButtonDefaults.elevatedButtonColors(
+                                            containerColor = containerColor(
+                                                thirdRowItems[item],
+                                                isSystemInDarkTheme()
+                                            ),
+                                            contentColor = contentColor(
+                                                thirdRowItems[item],
+                                                isSystemInDarkTheme()
                                             )
-                                        }
+                                        )
+                                    ) {
+                                        Text(
+                                            text = thirdRowItems[item],
+                                            fontSize = 21.sp,
+                                            fontWeight = FontWeight.W900
+                                        )
                                     }
-                                    Spacer(modifier = Modifier.size(5.dp))
+                                    Spacer(modifier = Modifier)
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                             Row(
                                 modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth()
+                                    .padding(5.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 for (item in 0..<fourthRowItems.size) {
-                                    Column(modifier = Modifier) {
-                                        ElevatedButton(
-                                            onClick = {
-                                                if (fourthRowItems[item] == "=") {
-                                                    if (arithmeticExpression.last()
-                                                            .isDigit() and arithmeticExpression.contains(
-                                                            pattern
-                                                        )
-                                                    ) {
-                                                        arithmeticExpression =
-                                                            decimalformatter.format(
-                                                                calculationLogic(
-                                                                    arithmeticExpression
-                                                                ).toBigDecimal()
-                                                            )
-                                                        result = ""
-                                                    }
-                                                } else {
-                                                    arithmeticExpression =
-                                                        arithmeticExpression.plus(fourthRowItems[item])
-                                                    if (arithmeticExpression.last()
-                                                            .isDigit() and arithmeticExpression.contains(
-                                                            pattern
-                                                        )
-                                                    ) {
-                                                        result = decimalformatter.format(
-                                                            calculationLogic(arithmeticExpression).toBigDecimal()
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .paddingFromBaseline(
-                                                    top = 35.dp,
-                                                    bottom = 25.dp
+                                    ElevatedButton(
+                                        onClick = {
+                                            if (fourthRowItems[item] == "=") {
+                                                arithmeticExpression = calculatedValue(
+                                                    arithmeticExpression,
+                                                    decimalformatter
                                                 )
-                                                .size(90.dp, 90.dp),
-                                            colors = ButtonDefaults.elevatedButtonColors(
-                                                containerColor = containerColor(
-                                                    fourthRowItems[item],
-                                                    isSystemInDarkTheme()
-                                                ),
-                                                contentColor = contentColor(
-                                                    fourthRowItems[item],
-                                                    isSystemInDarkTheme()
+                                                result = ""
+                                            } else {
+                                                arithmeticExpression =
+                                                    arithmeticExpression.plus(fourthRowItems[item])
+                                                result = calculatedValue(
+                                                    arithmeticExpression,
+                                                    decimalformatter
                                                 )
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f),
+                                        colors = ButtonDefaults.elevatedButtonColors(
+                                            containerColor = containerColor(
+                                                fourthRowItems[item],
+                                                isSystemInDarkTheme()
+                                            ),
+                                            contentColor = contentColor(
+                                                fourthRowItems[item],
+                                                isSystemInDarkTheme()
                                             )
-                                        ) {
-                                            Text(
-                                                text = fourthRowItems[item],
-                                                fontSize = 21.sp,
-                                                fontWeight = FontWeight.W900
-                                            )
-                                        }
+                                        )
+                                    ) {
+                                        Text(
+                                            text = fourthRowItems[item],
+                                            fontSize = 21.sp,
+                                            fontWeight = FontWeight.W900
+                                        )
                                     }
-                                    Spacer(modifier = Modifier.size(5.dp))
+                                    Spacer(modifier = Modifier)
                                 }
                             }
                         }
@@ -449,117 +377,26 @@ class MainActivity : ComponentActivity() {
 }
 
 fun calculationLogic(arithmeticExpression: String): String {
-    val pattern = Regex("(?<=[+\\-*/%])|(?=[+\\-*/%])")
-    val numbersWithOperators = arithmeticExpression.split(pattern).toMutableList()
+    val cleanExpression = arithmeticExpression
+        .replace("x", "*")
+        .replace("Rem", "%")
+    val percentageRegex = Regex("(\\d+\\.?\\d*)([+\\-*/])(\\d+\\.?\\d*)%")
+
+
+    val newExpression = if (cleanExpression.contains(percentageRegex)) {
+        cleanExpression.replace(percentageRegex) { matchResult ->
+            val firstNum = matchResult.groupValues[1]
+            val operator = matchResult.groupValues[2]
+            val percentNum = matchResult.groupValues[3]
+            "$firstNum$operator($firstNum*$percentNum/100)"
+        }
+    } else {
+        cleanExpression.replace("%", "/100")
+        }
     try {
-        if (numbersWithOperators.contains("/")) {
-            while (numbersWithOperators.contains("/")) {
-                val divOperatorIndex = numbersWithOperators.indexOf("/")
-                val leftNumber =
-                    numbersWithOperators[divOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[divOperatorIndex + 1].toDouble()
-                val value = if (rightNumber > 0.0) {
-                    leftNumber / rightNumber
-                } else {
-                    0.0
-                }
-                if (value > 0.0) {
-                    numbersWithOperators.removeAt(divOperatorIndex - 1)
-                    numbersWithOperators.removeAt(divOperatorIndex - 1)
-                    numbersWithOperators.removeAt(divOperatorIndex - 1)
-                    numbersWithOperators.add(divOperatorIndex - 1, value.toString())
-                } else {
-                    return BigDecimal.ZERO.toString()
-                }
-            }
-        }
-        if (numbersWithOperators.contains("*")) {
-            while (numbersWithOperators.contains("*")) {
-                val mulOperatorIndex = numbersWithOperators.indexOf("*")
-                val leftNumber =
-                    numbersWithOperators[mulOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[mulOperatorIndex + 1].toDouble()
-                val value = leftNumber.times(rightNumber)
-                numbersWithOperators.removeAt(mulOperatorIndex - 1)
-                numbersWithOperators.removeAt(mulOperatorIndex - 1)
-                numbersWithOperators.removeAt(mulOperatorIndex - 1)
-                numbersWithOperators.add(mulOperatorIndex - 1, value.toString())
-            }
-        }
-        if (numbersWithOperators.contains("+")) {
-            while (numbersWithOperators.contains("+")) {
-                val addOperatorIndex = numbersWithOperators.indexOf("+")
-                val leftNumber =
-                    numbersWithOperators[addOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[addOperatorIndex + 1].toDouble()
-                val value = leftNumber.plus(rightNumber)
-                numbersWithOperators.removeAt(addOperatorIndex - 1)
-                numbersWithOperators.removeAt(addOperatorIndex - 1)
-                numbersWithOperators.removeAt(addOperatorIndex - 1)
-                numbersWithOperators.add(addOperatorIndex - 1, value.toString())
-            }
-        }
-        if (numbersWithOperators.contains("-")) {
-            while (numbersWithOperators.contains("-")) {
-                val subOperatorIndex =
-                    numbersWithOperators.indexOf("-")
-                val leftNumber =
-                    numbersWithOperators[subOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[subOperatorIndex + 1].toDouble()
-                val value = leftNumber.minus(rightNumber)
-                numbersWithOperators.removeAt(subOperatorIndex - 1)
-                numbersWithOperators.removeAt(subOperatorIndex - 1)
-                numbersWithOperators.removeAt(subOperatorIndex - 1)
-                numbersWithOperators.add(
-                    subOperatorIndex - 1,
-                    value.toString()
-                )
-            }
-        }
-        if (numbersWithOperators.contains("%")) {
-            while (numbersWithOperators.contains("%")) {
-                val percentOperatorIndex =
-                    numbersWithOperators.indexOf("%")
-                val leftNumber =
-                    numbersWithOperators[percentOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[percentOperatorIndex + 1].toDouble()
-                val value = (leftNumber * rightNumber) / 100
-                numbersWithOperators.removeAt(percentOperatorIndex - 1)
-                numbersWithOperators.removeAt(percentOperatorIndex - 1)
-                numbersWithOperators.removeAt(percentOperatorIndex - 1)
-                numbersWithOperators.add(
-                    percentOperatorIndex - 1,
-                    value.toString()
-                )
-            }
-        }
-        if (numbersWithOperators.contains("Rem")) {
-            while (numbersWithOperators.contains("Rem")) {
-                val remOperatorIndex =
-                    numbersWithOperators.indexOf("Rem")
-                val leftNumber =
-                    numbersWithOperators[remOperatorIndex - 1].toDouble()
-                val rightNumber =
-                    numbersWithOperators[remOperatorIndex + 1].toDouble()
-                val value = leftNumber % rightNumber
-                numbersWithOperators.removeAt(remOperatorIndex - 1)
-                numbersWithOperators.removeAt(remOperatorIndex - 1)
-                numbersWithOperators.removeAt(remOperatorIndex - 1)
-                numbersWithOperators.add(
-                    remOperatorIndex - 1,
-                    value.toString()
-                )
-            }
-        }
-
-        return BigDecimal(numbersWithOperators.first()).setScale(10, RoundingMode.HALF_UP)
-            .toString()
-
+        val expression = ExpressionBuilder(newExpression).build()
+        val evalResult = expression.evaluate()
+        return evalResult.toString()
     } catch (e: Exception) {
         e.printStackTrace()
         return ""
@@ -594,4 +431,18 @@ fun contentColor(item: String, isDarkThemeEnabled: Boolean): Color {
         }
     }
     return color
+}
+
+fun calculatedValue(value: String, decimalformatter: DecimalFormat): String {
+    val libCalculatedValue = calculationLogic(value)
+    val calculatedValue = if (libCalculatedValue == "") {
+        ""
+    } else {
+        decimalformatter.format(libCalculatedValue.toBigDecimal())
+    }
+    return if (calculatedValue != "" && calculatedValue != value) {
+        calculatedValue
+    } else {
+        ""
+    }
 }
